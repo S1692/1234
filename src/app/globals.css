@@ -1,0 +1,9 @@
+/* This file is loaded globally and defines Tailwind layers and custom styles. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apply a sensible default font and background colour. */
+body {
+  @apply font-sans text-gray-900 bg-gray-50;
+}
