@@ -1,7 +1,6 @@
 """FastAPI reverse proxy for forwarding API requests to the service."""
 
 import os
-from urllib.parse import urljoin
 
 import httpx
 from fastapi import FastAPI, Request, Response, HTTPException
@@ -30,14 +29,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/favicon.ico")
+async def favicon() -> Response:
+    return Response(status_code=204)
 
 @app.get("/", summary="Gateway and service health")
 async def root() -> Response:
     """Return gateway status and proxy the service health check."""
     async with httpx.AsyncClient(timeout=20.0) as client:
         try:
-            resp = await client.get(urljoin(SERVICE_BASE_URL + "/", "/"))
-            # If service health endpoint returns non-JSON, catch exception
+            # call service root health
+            resp = await client.get(f"{SERVICE_BASE_URL}/")
             try:
                 service_data = resp.json()
             except Exception:
@@ -55,7 +57,6 @@ async def root() -> Response:
                 },
             )
 
-
 @app.api_route(
     "/api/{full_path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -67,10 +68,8 @@ async def proxy_api(full_path: str, request: Request) -> Response:
     method, query parameters, headers and body.
     """
     target_url = f"{SERVICE_BASE_URL}/{full_path}"
-    # Copy headers and remove host to avoid forwarding upstream host header
     headers = dict(request.headers)
     headers.pop("host", None)
-    # Read body from request
     body = await request.body()
     async with httpx.AsyncClient(timeout=20.0) as client:
         try:
@@ -86,7 +85,6 @@ async def proxy_api(full_path: str, request: Request) -> Response:
                 status_code=500,
                 detail=f"Error forwarding request to service: {exc}",
             )
-    # Build response excluding some hop-by-hop headers
     excluded_headers = {"content-encoding", "transfer-encoding", "connection"}
     response_headers = {
         k: v for k, v in resp.headers.items() if k.lower() not in excluded_headers
