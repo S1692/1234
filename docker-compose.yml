@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  service:
+    build: ./service
+    container_name: service
+    environment:
+      # DATABASE_URL should be provided via .env file or environment variables
+      - DATABASE_URL=${DATABASE_URL}
+      - PORT=8000
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    depends_on:
+      - service
+    environment:
+      # Service base URL within docker network
+      - SERVICE_BASE_URL=${SERVICE_BASE_URL:-http://service:8000}
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # Note: The frontend is not containerised here; run it locally using `npm run dev`

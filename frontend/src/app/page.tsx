@@ -1,0 +1,155 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+interface Item {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
+export default function Page() {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE as string;
+  const [items, setItems] = useState<Item[]>([]);
+  const [name, setName] = useState('');
+  const [health, setHealth] = useState<'loading' | 'ok' | 'fail'>('loading');
+
+  // Fetch service health
+  const fetchHealth = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/`);
+      const data = await res.json();
+      if (res.ok && data?.service?.db === 'ok') {
+        setHealth('ok');
+      } else {
+        setHealth('fail');
+      }
+    } catch (err) {
+      setHealth('fail');
+    }
+  };
+
+  // Fetch items list
+  const fetchItems = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/items`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch items');
+      }
+      const data: Item[] = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+    fetchItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Add new item
+  const addItem = async () => {
+    if (!name) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/items`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to create item');
+      }
+      setName('');
+      await fetchItems();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Delete item by id
+  const deleteItem = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/items/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error('Failed to delete item');
+      }
+      await fetchItems();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <main className="container mx-auto p-4 max-w-xl">
+      <h1 className="text-2xl font-bold mb-4">Items</h1>
+      <div className="mb-4">
+        <span
+          className={`px-2 py-1 rounded text-sm ${
+            health === 'ok'
+              ? 'bg-green-200 text-green-800'
+              : health === 'fail'
+              ? 'bg-red-200 text-red-800'
+              : 'bg-yellow-200 text-yellow-800'
+          }`}
+        >
+          {health === 'ok'
+            ? 'DB OK'
+            : health === 'fail'
+            ? 'DB FAIL'
+            : 'Checking...'}
+        </span>
+      </div>
+      <div className="flex mb-4 space-x-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Item name"
+          className="flex-1 px-2 py-1 border rounded"
+        />
+        <button
+          onClick={addItem}
+          className="px-3 py-1 bg-blue-600 text-white rounded"
+        >
+          Add
+        </button>
+        <button
+          onClick={() => {
+            fetchItems();
+            fetchHealth();
+          }}
+          className="px-3 py-1 bg-gray-600 text-white rounded"
+        >
+          Reload
+        </button>
+      </div>
+      <ul>
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="flex items-center justify-between border-b py-2"
+          >
+            <div>
+              <span className="font-medium">{item.name}</span>
+              <span className="text-sm text-gray-500 ml-2">
+                {new Date(item.created_at).toLocaleString()}
+              </span>
+            </div>
+            <button
+              onClick={() => deleteItem(item.id)}
+              className="text-red-600 hover:underline"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
