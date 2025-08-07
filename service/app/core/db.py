@@ -26,6 +26,7 @@ engine = create_async_engine(
     raw_url,
     echo=False,
     pool_pre_ping=True,
+    connect_args={"statement_cache_size": 0},  # ✅ Supabase Pooler 대응 핵심 설정
 )
 
 # Sessionmaker for dependency injection
