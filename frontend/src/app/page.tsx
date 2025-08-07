@@ -86,8 +86,9 @@ export default function Page() {
   };
 
   return (
-    <main className="container mx-auto p-4 max-w-xl">
+    <main className="container mx-auto p-4 max-w-4xl">
       <h1 className="text-2xl font-bold mb-4">Items</h1>
+
       <div className="mb-4">
         <span
           className={`px-2 py-1 rounded text-sm ${
@@ -105,6 +106,7 @@ export default function Page() {
             : 'Checking...'}
         </span>
       </div>
+
       <div className="flex mb-4 space-x-2">
         <input
           type="text"
@@ -129,27 +131,38 @@ export default function Page() {
           Reload
         </button>
       </div>
-      <ul>
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-center justify-between border-b py-2"
-          >
-            <div>
-              <span className="font-medium">{item.name}</span>
-              <span className="text-sm text-gray-500 ml-2">
-                {new Date(item.created_at).toLocaleString()}
-              </span>
-            </div>
-            <button
-              onClick={() => deleteItem(item.id)}
-              className="text-red-600 hover:underline"
-            >
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-2 py-1 text-left">ID</th>
+              <th className="border px-2 py-1 text-left">Name</th>
+              <th className="border px-2 py-1 text-left">Created At</th>
+              <th className="border px-2 py-1 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="border px-2 py-1">{item.id}</td>
+                <td className="border px-2 py-1">{item.name}</td>
+                <td className="border px-2 py-1">
+                  {new Date(item.created_at).toLocaleString()}
+                </td>
+                <td className="border px-2 py-1">
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }
