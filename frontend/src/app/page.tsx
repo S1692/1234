@@ -10,17 +10,16 @@ interface Item {
 }
 
 export default function Page() {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE as string;
   const [items, setItems] = useState<Item[]>([]);
   const [name, setName] = useState('');
   const [health, setHealth] = useState<'loading' | 'ok' | 'fail'>('loading');
 
-  // Fetch service health
+  // Fetch service health by hitting the backend's root via the proxy
   const fetchHealth = async () => {
     try {
-      const res = await fetch(`${API_BASE}/`);
-      const data = await res.json();
-      if (res.ok && data?.service?.db === 'ok') {
+      // This request is proxied by Next.js to the backend's root URL
+      const res = await fetch('/api/');
+      if (res.ok) {
         setHealth('ok');
       } else {
         setHealth('fail');
@@ -30,10 +29,10 @@ export default function Page() {
     }
   };
 
-  // Fetch items list
+  // Fetch items list using the relative path
   const fetchItems = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/items`);
+      const res = await fetch('/api/items');
       if (!res.ok) {
         throw new Error('Failed to fetch items');
       }
@@ -50,11 +49,11 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Add new item
+  // Add new item using the relative path
   const addItem = async () => {
     if (!name) return;
     try {
-      const res = await fetch(`${API_BASE}/api/items`, {
+      const res = await fetch('/api/items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,10 +70,10 @@ export default function Page() {
     }
   };
 
-  // Delete item by id
+  // Delete item by id using the relative path
   const deleteItem = async (id: number) => {
     try {
-      const res = await fetch(`${API_BASE}/api/items/${id}`, {
+      const res = await fetch(`/api/items/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 204) {
@@ -101,9 +100,9 @@ export default function Page() {
           }`}
         >
           {health === 'ok'
-            ? 'DB OK'
+            ? 'Backend OK'
             : health === 'fail'
-            ? 'DB FAIL'
+            ? 'Backend FAIL'
             : 'Checking...'}
         </span>
       </div>

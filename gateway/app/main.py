@@ -10,17 +10,35 @@ from fastapi.responses import JSONResponse
 from app.api import company_routes
 
 
-# 환경변수에서 서비스 주소 가져오기
-def get_service_base_url() -> str:
-    base_url = os.getenv("SERVICE_BASE_URL")
-    if not base_url:
-        raise RuntimeError("SERVICE_BASE_URL is not set.")
-    return base_url.rstrip("/")  # 슬래시 제거
+# The base URL for the downstream backend service (e.g., the actual 'service' microservice)
+# This is configured via an environment variable in the Railway deployment settings.
+SERVICE_BASE_URL = os.getenv("SERVICE_BASE_URL")
+if not SERVICE_BASE_URL:
+    raise RuntimeError("SERVICE_BASE_URL environment variable is not set.")
+SERVICE_BASE_URL = SERVICE_BASE_URL.rstrip("/")
 
-
-SERVICE_BASE_URL = get_service_base_url()
 
 app = FastAPI(title="Gateway")
+
+# A list of allowed origins for CORS.
+# This should include your frontend's production URL and local development URL.
+allowed_origins = [
+    "http://localhost:3000",  # Next.js local dev server
+    "https://gateway-service-production-dcfc.up.railway.app", # The gateway itself
+    # TODO: Add your Vercel frontend's production URL here
+    # "https://your-app-name.vercel.app",
+]
+
+
+# === Middleware ===
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # === Register Routers ===
 # The new company-specific router is included first to ensure its routes
@@ -28,57 +46,53 @@ app = FastAPI(title="Gateway")
 app.include_router(company_routes.router)
 
 
-# === Middleware ===
-# CORS 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 프론트 주소로 제한 가능
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# === Health & Favicon Routes ===
 
-# favicon 방지
-@app.get("/favicon.ico")
+# The Next.js dev server might request this. Returning 204 No Content is a clean way to handle it.
+@app.get("/favicon.ico", include_in_schema=False)
 async def favicon() -> Response:
     return Response(status_code=204)
 
-# 헬스 체크
+# Health check for the gateway itself and the downstream service it connects to.
 @app.get("/", summary="Gateway and service health")
 async def root() -> Response:
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.get(f"{SERVICE_BASE_URL}/")
-            try:
-                service_data = resp.json()
-            except Exception:
-                service_data = {"status": "fail", "detail": "Invalid JSON from service"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{SERVICE_BASE_URL}/") # Checks if the downstream service is reachable
+            service_data = resp.json() if resp.status_code == 200 else {"status": "fail", "detail": resp.text}
             return JSONResponse(
                 status_code=200,
                 content={"gateway": "ok", "service": service_data},
             )
     except Exception as exc:
         return JSONResponse(
-            status_code=200,
+            status_code=503,
             content={"gateway": "ok", "service": {"status": "fail", "detail": str(exc)}},
         )
 
 
-# 프록시 라우터: /api/ 이하 모든 요청 전달
+# === Generic Proxy Route ===
+# This route acts as a general-purpose reverse proxy.
+# It catches all requests under /api/ that haven't been matched by a more specific router.
 @app.api_route(
     "/api/{full_path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    summary="Proxy API requests to the service",
+    summary="Generic proxy for all other API requests",
+    include_in_schema=False, # Hide from OpenAPI docs if it's just a proxy
 )
 async def proxy_api(full_path: str, request: Request) -> Response:
-    target_url = f"{SERVICE_BASE_URL.rstrip('/')}/{full_path.lstrip('/')}"  # 중복 슬래시 방지
+    """
+    Proxies requests from /api/{full_path} to {SERVICE_BASE_URL}/{full_path}.
+    For example, a request to /api/items will be forwarded to http://service/items.
+    """
+    target_url = f"{SERVICE_BASE_URL}/{full_path.lstrip('/')}"
 
     headers = dict(request.headers)
-    headers.pop("host", None)
+    headers.pop("host", None) # The host header should be for the target service.
 
     body = await request.body()
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             resp = await client.request(
                 method=request.method,
@@ -89,11 +103,11 @@ async def proxy_api(full_path: str, request: Request) -> Response:
             )
         except httpx.RequestError as exc:
             return JSONResponse(
-                status_code=200,
+                status_code=503,
                 content={"status": "fail", "detail": f"Error forwarding request: {exc}"},
             )
 
-    # 제외할 응답 헤더
+    # Clean up response headers before sending back to the client
     excluded_headers = {"content-encoding", "transfer-encoding", "connection"}
     response_headers = {k: v for k, v in resp.headers.items() if k.lower() not in excluded_headers}
 
