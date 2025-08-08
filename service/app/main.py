@@ -1,10 +1,15 @@
 """FastAPI application entry point for the service."""
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import health, items
 from .core.db import init_db
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -27,7 +32,14 @@ def create_app() -> FastAPI:
     # Startup event to initialize the database
     @app.on_event("startup")
     async def on_startup() -> None:
-        await init_db()
+        logger.info("Application startup: Initializing database connection...")
+        try:
+            await init_db()
+            logger.info("Database connection and initialization successful.")
+        except Exception as e:
+            logger.critical(f"Database connection failed: {e}", exc_info=True)
+            # Potentially exit or handle the failure gracefully
+            raise
 
     return app
 
