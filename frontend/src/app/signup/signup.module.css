@@ -1,0 +1,100 @@
+.formContainer {
+  width: 100%;
+  max-width: 800px;
+  background-color: #2a2a2a;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fieldset {
+  border: 1px solid #555;
+  padding: 1.5rem;
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.legend {
+  padding: 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #00aaff;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-weight: 500;
+  text-align: left;
+}
+
+.input, .select {
+  background-color: #333;
+  border: 1px solid #666;
+  color: #e0e0e0;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: #00aaff;
+}
+
+.checkboxGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 1rem;
+}
+
+.button:hover {
+  background-color: #005fa3;
+}
+
+.message {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.success {
+  background-color: #2a5a2a;
+  color: #a0d0a0;
+}
+
+.error {
+  background-color: #5a2a2a;
+  color: #d0a0a0;
+}

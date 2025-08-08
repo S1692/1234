@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# Import the new router for company-specific endpoints
+from app.api import company_routes
+
 
 # 환경변수에서 서비스 주소 가져오기
 def get_service_base_url() -> str:
@@ -19,6 +22,13 @@ SERVICE_BASE_URL = get_service_base_url()
 
 app = FastAPI(title="Gateway")
 
+# === Register Routers ===
+# The new company-specific router is included first to ensure its routes
+# are matched before the generic proxy catch-all route.
+app.include_router(company_routes.router)
+
+
+# === Middleware ===
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
