@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Item {
   id: number;
@@ -130,6 +131,9 @@ export default function Page() {
         >
           Reload
         </button>
+        <Link href="/signup" className="px-3 py-1 bg-green-600 text-white rounded flex items-center">
+          Sign Up
+        </Link>
       </div>
 
       <div className="overflow-x-auto">
